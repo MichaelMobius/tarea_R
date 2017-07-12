@@ -15,9 +15,13 @@ eruption_filter<-eruption_filter[!(is.na(eruption_filter$Longitude)|eruption_fil
 max_erup=max(eruption_filter$TOTAL_DEATHS)
 max_tsu= max(tsunami_filter$TOTAL_DEATHS)
 
+row_num_tsu=seq(503)
+
 library(leaflet)
 library(shiny)
-library(htmltools)
+library(data.table)
+
+tsunami_filter=data.table(row_num_tsu,tsunami_filter)
 
 shinyApp(
   ui = fluidPage(
@@ -35,7 +39,12 @@ shinyApp(
       leaflet() %>% 
         addProviderTiles("OpenTopoMap", group="background 1") %>% 
         addProviderTiles("Esri.WorldStreetMap", group="background 2") %>%
-        setView(lng = -100, lat = 50, zoom = 2)
+        setView(lng = -100, lat = 50, zoom = 2) %>%
+        addLegend("bottomright", 
+                  colors =c("red", "blue"),
+                  labels= c("erupciones", "tsunamis"),
+                  title= "Desastres naturales",
+                  opacity = 1)
     }) 
   
     observe({
@@ -47,7 +56,9 @@ shinyApp(
       sites2 <- eruption_filter %>% 
         filter(findInterval(eruption_filter$Year, c(age - 0.5, age + 0.5)) == 1)
       
-      leafletProxy("MapPlot1") %>% clearMarkers() %>%
+      proxy <- leafletProxy("MapPlot1") 
+      
+      proxy %>% clearMarkers() %>%
         addCircleMarkers(lng = sites$LONGITUDE,
                          lat = sites$LATITUDE,
                          opacity = sites$TOTAL_DEATHS,radius=80-72*((max_tsu-sites$TOTAL_DEATHS)/(max_tsu-1)),color="black",fillColor="blue",stroke = FALSE, fillOpacity = 0.8,group="Tsunamis") %>%
@@ -55,6 +66,8 @@ shinyApp(
                          lat = sites2$Latitude,
                          opacity = sites2$TOTAL_DEATHS,radius=80-72*((max_erup-sites2$TOTAL_DEATHS)/(max_erup-1)),color="black",fillColor="red",stroke = FALSE, fillOpacity = 0.8,group="Erupciones") %>%
         addLayersControl(overlayGroups = c("Tsunamis","Erupciones") , baseGroups = c("background 1","background 2"), options = layersControlOptions(collapsed = FALSE))
+      
     })
+    
   } 
 )
