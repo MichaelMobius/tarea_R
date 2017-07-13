@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+	<title>Mapa de muertes por catástrofes</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+  <!-- Latest compiled and minified CSS -->
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+  <!-- Optional theme -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+  <!-- Latest compiled and minified JavaScript -->
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.1.0/dist/leaflet.css" integrity="sha512-wcw6ts8Anuw10Mzh9Ytw4pylW8+NAD4ch3lqm9lzAsTxg0GFeJgoAtxuCLREZSC5lUXdVyo/7yfsqFjQ4S+aKw==" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.1.0/dist/leaflet.js" integrity="sha512-mNqn2Wg7tSToJhvHcqfzLMU6J4mkOImSPTxVZAdo+lcPlk+GhZmYgACEe0x35K7YzW1zJ7XyJV/TT1MrdXvMcA==" crossorigin=""></script>
+
+
+
+  <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+
+  <script src="erupciones.json"></script>
+  <script src="tsunamis.json"></script>
+
+  <style>
+    html, body, #container, #row, #mapid {
+      height: 100%;
+    }
+
+    #slider, #date {
+      margin-bottom: 20px;
+    }
+
+    #date {
+      font-weight: bold;
+    }
+  </style>
+
+</head>
+<body>
+
+<div id="container" class="container-fluid">
+  <div id="row" class="row">
+    <div id="mapid" class="col-md-8"></div>
+    <div class="col-md-4">
+      <div class="row">
+        <div class="col-md-12">
+          <h2>Deslice el slider para cambiar el año</h2>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12">
+          <div id="date">Año: <span id="year"></span></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-12">
+          <div id="slider"></div>
+        </div>
+      </div>
+
+
+      <div class="row">
+        <div class="col-md-12">
+          <fieldset>
+              <label for="checkbox-1">Tsunamis</label>
+              <input type="checkbox" name="checkbox-1" id="checkbox-1">
+              <label for="checkbox-2">Erupciones volcanicas</label>
+              <input type="checkbox" name="checkbox-2" id="checkbox-2">
+            </fieldset>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+
+
+<script>
+	var mymap = L.map('mapid').setView([51.505, -0.09], 2);
+
+	L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+		maxZoom: 18,
+		attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+			'<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+			'Imagery © <a href="http://mapbox.com">Mapbox</a>',
+		id: 'mapbox.streets'
+	}).addTo(mymap);
+
+
+
+  var red_circles = [];
+	var min = 1;
+  var max = 230000;
+  var Rmax = 3000000;
+  var Rmin = 300000;
+
+  $.each(erupciones, function(index,data){
+    red_circles.push([data.Year, L.circle([data.Latitude, data.Longitude], Math.log(data.Deaths)*100000, {
+      color: 'red',
+      fillColor: '#f03',
+      fillOpacity: 0.5
+    }), data.Deaths]);
+  });
+
+  var blue_circles = [];
+
+  $.each(tsunamis, function(index,data){
+    blue_circles.push([data.Year, L.circle([data.Latitude, data.Longitude], Math.log(data.Deaths)*100000, {
+      color: 'blue',
+      fillColor: '#66f',
+      fillOpacity: 0.5
+    }), data.Deaths]);
+  });
+
+  function draw_circles(event, ui){
+    $("#year").html(ui.value);
+
+    $.each(red_circles, function(index, circle){
+      circle[1].remove();
+    });
+
+    $.each(blue_circles, function(index, circle){
+      circle[1].remove();
+    });
+
+
+    if ($("#checkbox-2").prop("checked")){
+      $.each(red_circles, function(index, circle){
+        if (circle[0] == ui.value) {
+          circle[1].addTo(mymap).bindPopup(circle[2] + " muertes");
+        }
+      });
+    }
+
+    if ($("#checkbox-1").prop("checked")){
+      $.each(blue_circles, function(index, circle){
+        if (circle[0] == ui.value) {
+          circle[1].addTo(mymap).bindPopup(circle[2] + " muertes");
+        }
+      });
+    }
+  }
+
+  $( function() {
+    $( "#slider" ).slider({
+      range: true,
+      min: -150,
+      max: 2015,
+      slide: draw_circles
+    });
+  } );
+
+  $( function() {
+    $( "input" ).checkboxradio();
+  } );
+
+  $("#checkbox-1").on("change", function() {
+    if(!$(this).is(":checked")) {
+      $.each(blue_circles, function(index, circle){
+        circle[1].remove();
+      });
+
+    } else {
+      $.each(blue_circles, function(index, circle){
+        if (circle[0] == $("#year").html()) {
+          circle[1].addTo(mymap).bindPopup(circle[2] + " muertes");
+        }
+      });
+    }
+
+
+  });
+
+  $("#checkbox-2").on("change", function() {
+    if(!$(this).is(":checked")) {
+      $.each(red_circles, function(index, circle){
+        circle[1].remove();
+      });
+    } else {
+      $.each(red_circles, function(index, circle){
+        if (circle[0] == $("#year").html()) {
+          circle[1].addTo(mymap).bindPopup(circle[2] + " muertes");
+        }
+      });
+    }
+  });
+</script>
+</body>
+</html>
